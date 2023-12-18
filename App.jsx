@@ -1,84 +1,96 @@
-import React, {useEffect, useRef} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {View, Text, Button, Alert} from 'react-native';
-import JsSIP from 'jssip';
+import JsSIP from 'react-native-jssip';
 import {RTCView} from 'react-native-webrtc';
+import PermissionsAndroid, { PERMISSIONS } from 'react-native-permissions';
 
 const App = () => {
-  const remoteStream = useRef();
+  const remoteStream = useRef(null);
   const ua = useRef(null);
-
+  const [hasPermission, setHasPermission] = useState(false);
+  
   useEffect(() => {
-    const configuration = {
-      uri: 'sip:webrtc_client@webrtc.iotcom.io',
+    const config = {
+      uri: 'sip:webrtc_client@webrtc.iotcom.io', // Replace with your details
       password: 'password',
       sockets: [new JsSIP.WebSocketInterface('wss://webrtc.iotcom.io:8089/ws')],
     };
 
-    ua.current = new JsSIP.UA(configuration);
+    ua.current = new JsSIP.UA(config);
 
-    ua.current.start();
-
-    ua.current.on('connected', e => {
-      console.log('Connected', e);
+    ua.current.on('connected', () => {
+      console.log('Connected to SIP server');
     });
 
-    ua.current.on('newMessage', e => {
-      console.log('New Message', e);
+    ua.current.on('failed', error => {
+      console.error('Connection failed:', error);
+      Alert.alert('Connection error', error.cause || 'Unknown error');
     });
 
     ua.current.on('newRTCSession', data => {
       const session = data.session;
 
       if (session.direction === 'incoming') {
-        // Answer the incoming call
         session.answer();
 
-        // Attach remote stream when it becomes available
         session.connection.addEventListener('addstream', event => {
           remoteStream.current.srcObject = event.stream;
         });
       }
     });
 
-    ua.current.on('failed', e => {
-      console.error('Call failed:', e);
-      Alert.alert('Call failed', e.cause || 'Unknown error');
-    });
-
-    // Handle other events as needed
-
     return () => {
-      // Cleanup or disconnect when the component unmounts
       ua.current.stop();
     };
   }, []);
 
   const makeCall = () => {
-    // Make an outgoing call
     const options = {
       mediaConstraints: {audio: true, video: true},
     };
 
-    const session = ua.current.call('sip:600@webrtc.iotcom.io', options);
+    const session = ua.current.call(
+      'sip:webrtc_client1@webrtc.iotcom.io',
+      options,
+    );
 
-    session.on('failed', e => {
-      console.error('Call failed:', e);
-      Alert.alert('Call failed', e.cause || 'Unknown error');
+    session.on('failed', error => {
+      console.error('Call failed:', error);
+      Alert.alert('Call error', error.cause || 'Unknown error');
     });
 
-    // Attach remote stream when it becomes available
     session.connection.addEventListener('addstream', event => {
       remoteStream.current.srcObject = event.stream;
     });
   };
 
+
+  const requestCameraPermission = async () => {
+    try {
+      const granted = await PermissionsAndroid.request(PermissionsAndroid.CAMERA);
+      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+        setHasPermission(true);
+      } else {
+        console.warn('Camera permission denied');
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+
   return (
     <View>
       <Text>Your React Native App</Text>
-      <RTCView
-        streamURL={remoteStream.current ? remoteStream.current.toURL() : null}
-        style={{flex: 1}}
-      />
+      {!hasPermission && (
+        <Button
+          title="Request Camera Permission"
+          onPress={requestCameraPermission}
+        />
+      )}
+      {hasPermission && <Text>Camera is ready to use!</Text>}
+
+      <RTCView streamURL={remoteStream.current?.toURL()} style={{flex: 1}} />
       <Button title="Make Call" onPress={makeCall} />
     </View>
   );

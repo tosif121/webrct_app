@@ -12,7 +12,11 @@ const Dail = () => {
   return (
     <View style={styles.container}>
       <Image style={styles.logo} source={require('../images/logo.png')} />
-      <TextInput placeholder="Dial" style={styles.input} />
+      <TextInput
+        placeholder="Dial"
+        style={styles.input}
+        placeholderTextColor="#565869"
+      />
 
       <TouchableOpacity
         // onPress={() => {

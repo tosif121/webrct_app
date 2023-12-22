@@ -28,6 +28,7 @@ const Home = ({navigation}) => {
         placeholder="Enter Username"
         value={username}
         onChangeText={text => setUsername(text)}
+        placeholderTextColor="#565869"
         style={styles.input}
       />
       <TextInput
@@ -35,6 +36,7 @@ const Home = ({navigation}) => {
         value={password}
         onChangeText={text => setPassword(text)}
         secureTextEntry
+        placeholderTextColor="#565869"
         style={styles.input}
       />
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
